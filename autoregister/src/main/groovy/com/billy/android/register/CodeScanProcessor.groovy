@@ -59,6 +59,7 @@ class CodeScanProcessor {
         addToCacheMap(null, null, srcFilePath)
         return true
     }
+
     /**
      * 检查此entryName是不是被注入注册代码的类，如果是则记录此文件（class文件或jar文件）用于后续的注册代码注入
      * @param entryName

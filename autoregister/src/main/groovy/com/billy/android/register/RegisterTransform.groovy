@@ -62,26 +62,22 @@ class RegisterTransform extends Transform {
         long time = System.currentTimeMillis()
         boolean leftSlash = File.separator == '/'
 
+        println("auto-register-----------isIncremental:${isIncremental}\n")
 
-        def cacheEnabled = config.cacheEnabled
-        println("auto-register-----------isIncremental:${isIncremental}--------config.cacheEnabled:${cacheEnabled}--------------------\n")
-
-        File jarManagerfile = null
-        Map<String, ScanJarHarvest> cacheMap = null
-        File cacheFile = null
-        Gson gson = null
-
-        if (cacheEnabled) { //开启了缓存
-            gson = new Gson()
-            cacheFile = AutoRegisterHelper.getRegisterCacheFile(project)
-            if (clearCache && cacheFile.exists())
-                cacheFile.delete()
-            cacheMap = AutoRegisterHelper.readToMap(cacheFile, new TypeToken<HashMap<String, ScanJarHarvest>>() {
-            }.getType())
+        Gson gson = new Gson()
+        File cacheFile = AutoRegisterHelper.getRegisterCacheFile(project)
+        if (clearCache && cacheFile.exists()) {
+            cacheFile.delete()
         }
+        Map<String, ScanJarHarvest> cacheMap = AutoRegisterHelper.readToMap(cacheFile, new TypeToken<HashMap<String, ScanJarHarvest>>() {
+        }.getType())
 
         CodeScanProcessor scanProcessor = new CodeScanProcessor(config.list, cacheMap)
 
+        /**
+         * 遍历所有的输入文件，此时仅仅是完成扫描和复制工作，并没有完成注入操作。
+         * 主要完成的工作：
+         */
         // 遍历输入文件
         inputs.each { TransformInput input ->
             // 遍历jar
@@ -120,6 +116,7 @@ class RegisterTransform extends Transform {
             }
         }
 
+        // 缓存所有的扫描结果
         if (cacheMap != null && cacheFile && gson) {
             def json = gson.toJson(cacheMap)
             AutoRegisterHelper.cacheRegisterHarvest(cacheFile, json)
@@ -128,6 +125,9 @@ class RegisterTransform extends Transform {
         def scanFinishTime = System.currentTimeMillis()
         project.logger.error("register scan all class cost time: " + (scanFinishTime - time) + " ms")
 
+        /**
+         * 对每一个配置项进行便利，真正执行代码注入操作
+         */
         config.list.each { ext ->
             if (ext.fileContainsInitClass) {
                 println('')
@@ -150,10 +150,9 @@ class RegisterTransform extends Transform {
     }
 
     void scanJar(JarInput jarInput, TransformOutputProvider outputProvider, CodeScanProcessor scanProcessor) {
-
         // 获得输入文件
         File src = jarInput.file
-        //遍历jar的字节码类文件，找到需要自动注册的类
+        // 遍历jar的字节码类文件，找到需要自动注册的类
         File dest = getDestFile(jarInput, outputProvider)
         long time = System.currentTimeMillis();
         if (!scanProcessor.scanJar(src, dest) //直接读取了缓存，没有执行实际的扫描
@@ -172,6 +171,7 @@ class RegisterTransform extends Transform {
         def destName = jarInput.name
         // 重名名输出文件,因为可能同名,会覆盖
         def hexName = DigestUtils.md5Hex(jarInput.file.absolutePath)
+        // 如果是以jar结尾，则去掉后四位(.jar)
         if (destName.endsWith(".jar")) {
             destName = destName.substring(0, destName.length() - 4)
         }
