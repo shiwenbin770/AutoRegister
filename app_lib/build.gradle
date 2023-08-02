@@ -1,17 +1,13 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 25
-    buildToolsVersion '26.0.2'
-
+    compileSdk 33
 
     defaultConfig {
-        minSdkVersion 14
-        targetSdkVersion 25
+        minSdk 14
+        targetSdk 33
         versionCode 1
         versionName "1.0"
-
-
     }
 
     buildTypes {
@@ -24,5 +20,5 @@ android {
 }
 
 dependencies {
-    compile project(':app_lib_interface')
+    api project(':app_lib_interface')
 }
